@@ -45,11 +45,8 @@ function findPlace(latLng, radius, query, map, service){
                     markers.push(marker);
                 }
             }
-            if(status === google.maps.GeocoderStatus.OVER_QUERY_LIMIT){
+            if(status == google.maps.GeocoderStatus.OVER_QUERY_LIMIT){
                 setTimeout(function(){findPlace(latLng, radius, query, map, service);}, 200);
-            }
-            else{
-                console.log("ERROR: " + status);
             }
         }
     );
