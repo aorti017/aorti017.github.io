@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<title>Roadside</title>
+<head>
+<script src="http://maps.googleapis.com/maps/api/js?key=AIzaSyCQYwa94Mt25KJotuKcGaXeMV22MJ5dhbA&libraries=places"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script>
+
+var startLatLng;
+var endLatLng;
+var map;
+var directionsDisplay;
+var radius;
+var query;
+var markers = [];
+function initialize() {
+    directionsDisplay = new google.maps.DirectionsRenderer();
+
+    map = new google.maps.Map(document.getElementById('googleMap'), {
+        center:new google.maps.LatLng(34.041287, -118.247036),
+    	zoom:7,
+    	mapTypeId: google.maps.MapTypeId.ROADMAP
+    });
+
+    directionsDisplay.setMap(map);
+}
+
+function findPlace(latLng, radius, query, map, service){
+    service.nearbySearch({
+        key: "AIzaSyDHokrGbbgBT9QkIimTLdfwpwov0c8dKvo",
+        location: latLng,
+        radius: radius,
+        keyword: query,
+        }, 
+        function(response, status){
+            if(status == google.maps.places.PlacesServiceStatus.OK){
+                for(i=0; i < response.length; i++){
+                    latLng = {lat: response[i].geometry.location.lat(), 
+                    lng: response[i].geometry.location.lng()};
+                    var marker = new google.maps.Marker({
+                        position: latLng,
+                        map: map,
+                        title: 'Store'    
+                    });
+                    markers.push(marker);
+                }
+            }
+            if(status === google.maps.GeocoderStatus.OVER_QUERY_LIMIT){
+                setTimeout(function(){findPlace(latLng, radius, query, map, service);}, 200);
+            }
+            else{
+                console.log("ERROR: " + status);
+            }
+        }
+    );
+}
+
+function createAndTraverseRoute(){
+    for(i=0; i < markers.length; i++){
+        markers[i].setMap(null);
+    }
+    var origin=startLatLng;
+    var destination=endLatLng;
+    var directionsService = new google.maps.DirectionsService();
+    var request = {
+        origin: origin, 
+        destination: destination,
+        travelMode: google.maps.DirectionsTravelMode.DRIVING
+    };
+
+    directionsService.route(request, function(response, status) {
+        if (status == google.maps.DirectionsStatus.OK) {
+            directionsDisplay.setDirections(response);
+        }
+        var path = response.routes[0].overview_path;
+        var latLng = new google.maps.LatLng({lat: 0, lng: 0});
+        var prevLat = -1;
+        var prevLng = -1;
+        for(i=0; i < path.length; i++){
+            latLng = new google.maps.LatLng({lat: path[i].lat(), lng: path[i].lng()});
+            var prevLatLng;
+            if(prevLng == -1 || prevLat == -1){
+                prevLatLng = new google.maps.LatLng({lat: path[i].lat(), lng: path[i].lng()});    
+            }
+            else{
+                prevLatLng = new google.maps.LatLng({lat: prevLat, lng: prevLng});       
+            }
+            var distance = google.maps.geometry.spherical.computeDistanceBetween(latLng, prevLatLng);
+            if(distance >= radius || distance == 0 && i==0){
+                var service = new google.maps.places.PlacesService(map);
+                findPlace(latLng, radius, query, map, service);
+                prevLng = latLng.lng();
+                prevLat = latLng.lat();
+            }
+        }
+    });
+}
+
+
+function saveStart(x, y){
+    startLatLng = new google.maps.LatLng(x, y);
+}
+
+function saveEnd(x, y){
+    endLatLng = new google.maps.LatLng(x, y);
+}
+
+function generateRoute(){
+    var start = document.getElementById("start").value;
+    var end = document.getElementById("end").value;
+    radius = document.getElementById("radius").value;
+    query = document.getElementById("query").value;
+    query = query.split(',');
+    console.log(query);
+    if(start == "" || end == ""){
+        //output error
+    }
+    else{
+        var geocoder = new google.maps.Geocoder();
+        geocoder.geocode({'address': start}, function(response, status){
+            if(status == google.maps.GeocoderStatus.OK){
+                startLat = response[0].geometry.location.lat();
+                startLng  = response[0].geometry.location.lng();
+                saveStart(startLat, startLng);
+            }
+        });
+        geocoder.geocode({'address': end}, function(response, status){
+            if(status == google.maps.GeocoderStatus.OK){
+                endLat = response[0].geometry.location.lat();
+                endLng  = response[0].geometry.location.lng();
+                saveEnd(endLat, endLng);
+            }
+        });
+    }
+}
+google.maps.event.addDomListener(window, 'load', initialize);
+</script>
+</head>
+
+<body>
+    <div id="googleMap" style="width:1000px;height:760px;"></div>
+    <div id="startLatLng" style='display: none;' value="()"></div>
+    <div id="endLatLng" style='display: none;' value="()"></div>
+    <div id="error" style='display: none;'>All fields must be filled.</div>
+    <form id="route">
+        Start: <input id="start" type="text"><br>
+        Destination: <input id="end" type="text"><br>
+        Max distance variation: <input id="radius" type="text"><br>
+        Search query(seperate multiple terms by ','): <input id="query" type="text"><br>
+        <input type="button" value="Set parameters" onclick="generateRoute()">
+    </form>
+    <button onclick="createAndTraverseRoute()">Execute</button>
+</body>
+</html>
