@@ -126,6 +126,7 @@ function generateRoute(){
                 endLat = response[0].geometry.location.lat();
                 endLng  = response[0].geometry.location.lng();
                 saveEnd(endLat, endLng);
+                createAndTraverseRoute();
             }
         });
     }
@@ -144,8 +145,7 @@ google.maps.event.addDomListener(window, 'load', initialize);
         Destination: <input id="end" type="text"><br>
         Max distance variation: <input id="radius" type="text"><br>
         Search query(seperate multiple terms by ','): <input id="query" type="text"><br>
-        <input type="button" value="Set parameters" onclick="generateRoute()">
+        <input type="button" value="Find places" onclick="generateRoute()">
     </form>
-    <button onclick="createAndTraverseRoute()">Execute</button>
 </body>
 </html>
